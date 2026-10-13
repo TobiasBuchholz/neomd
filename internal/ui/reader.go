@@ -55,8 +55,9 @@ func newReader(width, height int) viewport.Model {
 	return vp
 }
 
-// numberLinks replaces [text](url) in markdown with [text [N]](url) so glamour
-// renders the link number inline where the link appears in the body.
+// numberLinks replaces [text](url) in markdown with [text [N]](#) so glamour
+// renders the link number inline and omits the URL, which it skips for
+// anchor-only links. The URLs stay reachable through the numbered link keys.
 func numberLinks(body string, links []emailLink) string {
 	if len(links) == 0 {
 		return body
@@ -77,7 +78,7 @@ func numberLinks(body string, links []emailLink) string {
 		}
 		text, url := parts[1], parts[2]
 		if n, ok := urlToNum[url]; ok {
-			return fmt.Sprintf("[%s [%d]](%s)", text, n, url)
+			return fmt.Sprintf("[%s [%d]](#)", text, n)
 		}
 		return m
 	})
