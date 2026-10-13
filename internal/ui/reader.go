@@ -22,9 +22,22 @@ type emailLink struct {
 // Uses non-greedy .+? to allow brackets inside link text (e.g. [[text]](url))
 var mdLinkRe = regexp.MustCompile(`\[(.+?)\]\((https?://[^)]+)\)`)
 
+var (
+	mdLinkedImageRe = regexp.MustCompile(`\[!\[([^\]]*)\]\(https?://[^)\s]+(?:\s+"[^"]*")?\)\]\((https?://[^)]+)\)`)
+	mdImageRe       = regexp.MustCompile(`!\[([^\]]*)\]\((https?://[^)\s]+)(?:\s+"[^"]*")?\)`)
+)
+
+// imagesAsLinks rewrites ![alt](src) as [Image: alt](src), and an image wrapped
+// in a link as [Image: alt](href), so the link number opens the click target and
+// glamour has no image URL to print.
+func imagesAsLinks(markdown string) string {
+	markdown = mdLinkedImageRe.ReplaceAllString(markdown, "[Image: $1]($2)")
+	return mdImageRe.ReplaceAllString(markdown, "[Image: $1]($2)")
+}
+
 // extractLinks pulls all [text](url) links from markdown, deduplicating by URL.
 func extractLinks(markdown string) []emailLink {
-	matches := mdLinkRe.FindAllStringSubmatch(markdown, -1)
+	matches := mdLinkRe.FindAllStringSubmatch(imagesAsLinks(markdown), -1)
 	seen := make(map[string]bool)
 	var links []emailLink
 	for _, m := range matches {
@@ -59,6 +72,7 @@ func newReader(width, height int) viewport.Model {
 // renders the link number inline and omits the URL, which it skips for
 // anchor-only links. The URLs stay reachable through the numbered link keys.
 func numberLinks(body string, links []emailLink) string {
+	body = imagesAsLinks(body)
 	if len(links) == 0 {
 		return body
 	}
